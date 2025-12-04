@@ -1,0 +1,45 @@
+[package]
+name = "jarvis-ai"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true, features = [
+    "Window",
+    "AudioContext",
+    "AudioBuffer",
+    "MediaStream",
+    "MediaStreamTrack",
+    "MediaRecorder",
+    "Blob",
+    "BlobEvent",
+] }
+js-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+
+# AI/ML dependencies - temporarily commented out
+# Will be re-enabled once Candle WASM dependencies are resolved
+# candle-core = { workspace = true }
+# candle-nn = { workspace = true }
+# candle-transformers = { workspace = true }
+# hf-hub = { workspace = true }
+
+# Audio processing
+rubato = { workspace = true }
+
+[dependencies.getrandom]
+version = "0.2"
+features = ["js"]

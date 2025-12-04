@@ -1,0 +1,57 @@
+[package]
+name = "jarvis-app"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+leptos = { workspace = true }
+leptos_router = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true, features = [
+    "Window",
+    "Document",
+    "HtmlElement",
+    "HtmlInputElement",
+    "HtmlButtonElement",
+    "HtmlTextAreaElement",
+    "Event",
+    "EventTarget",
+    "Storage",
+    "Location",
+    "Navigator",
+    "MediaDevices",
+    "MediaStream",
+    "MediaStreamConstraints",
+    "AudioContext",
+    "AudioBuffer",
+    "MediaRecorder",
+    "MediaRecorderOptions",
+    "BlobEvent",
+    "Blob",
+    "Response",
+    "Request",
+    "RequestInit",
+    "Headers",
+] }
+js-sys = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+console_error_panic_hook = { workspace = true }
+console_log = { workspace = true }
+log = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+jarvis-ai = { path = "../jarvis-ai" }
+jarvis-mcp = { path = "../jarvis-mcp" }
+
+[dependencies.getrandom]
+version = "0.2"
+features = ["js"]
