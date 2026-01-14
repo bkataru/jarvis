@@ -1,0 +1,53 @@
+[package]
+name = "jarvis-ai"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AI inference engine for JARVIS using Burn ML framework"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["ndarray"]
+# CPU backend (default, works everywhere in WASM)
+ndarray = ["burn/ndarray"]
+# WebGPU backend (GPU acceleration in browser)
+wgpu = ["burn/wgpu", "burn/webgpu"]
+
+[dependencies]
+# AI/ML - Burn framework
+burn = { workspace = true }
+
+# WASM bindings
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true, features = [
+    "Window",
+    "AudioContext",
+    "AudioBuffer",
+    "MediaStream",
+    "MediaStreamTrack",
+    "MediaRecorder",
+    "Blob",
+    "BlobEvent",
+] }
+js-sys = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+
+# Utilities
+log = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+
+# Audio processing
+rubato = { workspace = true }
+
+# getrandom for WASM
+getrandom = { workspace = true }
