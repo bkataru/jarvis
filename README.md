@@ -52,12 +52,24 @@ The AI engine supports multiple backends via Burn:
 
 **Important**: This project uses a workspace structure which may require special configuration for deployment tools like Trunk. The code compiles successfully with `cargo check --target wasm32-unknown-unknown`.
 
-For deployment, you may need to:
-1. Configure Trunk to work with workspace projects, or
-2. Build using alternative WASM bundlers, or
-3. Use a different deployment approach
+### Trunk Configuration
 
-## Current Status
+Due to limitations with Trunk and workspace projects, you may need to use one of these approaches:
+
+1. **Manual WASM Build** (Recommended):
+   ```bash
+   # Build WASM manually
+   cargo build --target wasm32-unknown-unknown --release -p jarvis-app
+   
+   # Then use a simple HTTP server to serve the files
+   # python -m http.server 8080
+   ```
+
+2. **Alternative Bundler**: Consider using wasm-pack or other WASM bundlers that work better with workspaces.
+
+3. **Flat Project Structure**: Restructure to a single crate instead of workspace if Trunk is required.
+
+### Current Status
 
 ### ✅ Completed
 - **ML Framework**: Migrated from Candle to Burn 0.19 (resolves WASM dependency conflicts)
@@ -81,7 +93,10 @@ cargo check --target wasm32-unknown-unknown
 # Run clippy checks
 cargo clippy --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
 
-# Build (may require Trunk configuration adjustments)
+# Build WASM (recommended approach)
+cargo build --target wasm32-unknown-unknown --release -p jarvis-app
+
+# Or try trunk (may require configuration adjustments)
 trunk build
 ```
 
