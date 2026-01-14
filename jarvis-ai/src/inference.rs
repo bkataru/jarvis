@@ -307,7 +307,15 @@ impl JarvisModel<NdArray<f32>> for MockWhisperModel {
         let user_message = messages.iter()
             .rev()
             .find(|m| m.role == crate::types::MessageRole::User)
-            .map(|m| m.content.to_string())
+            .and_then(|m| {
+                // Get the first text part from message parts
+                m.message_parts.iter().find_map(|part| {
+                    match part {
+                        crate::types::MessagePart::Text(text_part) => Some(text_part.text.clone()),
+                        _ => None,
+                    }
+                })
+            })
             .unwrap_or_else(|| "No user message".to_string());
         
         // Generate context-aware mock response
