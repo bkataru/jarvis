@@ -130,7 +130,8 @@ impl InferenceEngine {
         match self.model_type {
             Some(model_type) => {
                 // For now, create a mock model
-                // TODO: Replace with real Burn model initialization when available
+                // NOTE: Mock model used for development. Replace with real Burn model
+                // when whisper-burn or similar implementation becomes available.
                 let mock_model = MockWhisperModel::new(model_type);
                 self.model = Some(Arc::new(Mutex::new(mock_model)));
                 self.model_state = ModelState::Ready;
