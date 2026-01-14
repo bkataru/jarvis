@@ -48,7 +48,6 @@ impl ModelType {
 }
 
 /// Model loading progress
-/// Model loading progress
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadProgress {
     pub loaded_bytes: u64,
