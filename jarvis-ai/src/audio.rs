@@ -97,12 +97,12 @@ impl Default for AudioCapture {
 }
 
 /// Resample audio from source sample rate to target sample rate using linear interpolation
-/// 
+///
 /// # Arguments
 /// * `input` - Input audio samples
 /// * `source_rate` - Source sample rate in Hz
 /// * `target_rate` - Target sample rate in Hz
-/// 
+///
 /// # Returns
 /// Resampled audio samples
 pub fn resample_audio(
@@ -147,7 +147,7 @@ pub fn resample_audio(
 }
 
 /// Create mel filterbank matrix
-/// 
+///
 /// # Arguments
 /// * `n_mels` - Number of mel bins
 /// * `n_fft` - FFT size
@@ -155,57 +155,55 @@ pub fn resample_audio(
 fn create_mel_filterbank(n_mels: usize, n_fft: usize, sample_rate: u32) -> Vec<Vec<f32>> {
     let n_freqs = n_fft / 2 + 1;
     let sample_rate = sample_rate as f64;
-    
+
     // Convert Hz to mel scale
-    let hz_to_mel = |hz: f64| -> f64 {
-        2595.0 * (1.0 + hz / 700.0).ln() / 10.0_f64.ln()
-    };
-    
+    let hz_to_mel = |hz: f64| -> f64 { 2595.0 * (1.0 + hz / 700.0).ln() / 10.0_f64.ln() };
+
     // Convert mel to Hz
-    let mel_to_hz = |mel: f64| -> f64 {
-        700.0 * (10.0_f64.powf(mel / 2595.0) - 1.0)
-    };
-    
+    let mel_to_hz = |mel: f64| -> f64 { 700.0 * (10.0_f64.powf(mel / 2595.0) - 1.0) };
+
     let mel_min = hz_to_mel(0.0);
     let mel_max = hz_to_mel(sample_rate / 2.0);
-    
+
     // Create mel points
     let mel_points: Vec<f64> = (0..=n_mels + 1)
         .map(|i| mel_min + (mel_max - mel_min) * i as f64 / (n_mels + 1) as f64)
         .collect();
-    
+
     // Convert back to Hz
     let hz_points: Vec<f64> = mel_points.iter().map(|&m| mel_to_hz(m)).collect();
-    
+
     // Convert to FFT bin indices
     let bin_points: Vec<usize> = hz_points
         .iter()
         .map(|&hz| ((n_fft as f64 + 1.0) * hz / sample_rate).floor() as usize)
         .collect();
-    
+
     // Create filterbank
     let mut filterbank = vec![vec![0.0f32; n_freqs]; n_mels];
-    
+
     for i in 0..n_mels {
         let left = bin_points[i];
         let center = bin_points[i + 1];
         let right = bin_points[i + 2];
-        
+
         // Rising edge
-        for j in left..center {
-            if center > left && j < n_freqs {
-                filterbank[i][j] = (j - left) as f32 / (center - left) as f32;
+        if center > left {
+            let end = center.min(n_freqs);
+            for (j, v) in filterbank[i].iter_mut().enumerate().take(end).skip(left) {
+                *v = (j - left) as f32 / (center - left) as f32;
             }
         }
-        
+
         // Falling edge
-        for j in center..right {
-            if right > center && j < n_freqs {
-                filterbank[i][j] = (right - j) as f32 / (right - center) as f32;
+        if right > center {
+            let end = right.min(n_freqs);
+            for (j, v) in filterbank[i].iter_mut().enumerate().take(end).skip(center) {
+                *v = (right - j) as f32 / (right - center) as f32;
             }
         }
     }
-    
+
     filterbank
 }
 
@@ -213,24 +211,22 @@ fn create_mel_filterbank(n_mels: usize, n_fft: usize, sample_rate: u32) -> Vec<V
 fn compute_stft_magnitude(audio: &[f32], n_fft: usize, hop_length: usize) -> Vec<Vec<f32>> {
     let n_freqs = n_fft / 2 + 1;
     let n_frames = (audio.len().saturating_sub(n_fft)) / hop_length + 1;
-    
+
     if n_frames == 0 {
         return vec![];
     }
-    
+
     // Create Hann window
     let window: Vec<f32> = (0..n_fft)
-        .map(|i| {
-            0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / n_fft as f32).cos())
-        })
+        .map(|i| 0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / n_fft as f32).cos()))
         .collect();
-    
+
     let mut magnitudes = Vec::with_capacity(n_frames);
-    
+
     for frame in 0..n_frames {
         let start = frame * hop_length;
         let end = (start + n_fft).min(audio.len());
-        
+
         // Apply window and zero-pad if necessary
         let windowed: Vec<f32> = (0..n_fft)
             .map(|i| {
@@ -241,49 +237,49 @@ fn compute_stft_magnitude(audio: &[f32], n_fft: usize, hop_length: usize) -> Vec
                 }
             })
             .collect();
-        
+
         // Compute DFT (simplified - real FFT would be more efficient)
         let mut frame_magnitudes = Vec::with_capacity(n_freqs);
         for k in 0..n_freqs {
             let mut real = 0.0f64;
             let mut imag = 0.0f64;
-            
+
             for (n, &sample) in windowed.iter().enumerate() {
                 let angle = -2.0 * std::f64::consts::PI * k as f64 * n as f64 / n_fft as f64;
                 real += sample as f64 * angle.cos();
                 imag += sample as f64 * angle.sin();
             }
-            
+
             let magnitude = (real * real + imag * imag).sqrt() as f32;
             frame_magnitudes.push(magnitude);
         }
-        
+
         magnitudes.push(frame_magnitudes);
     }
-    
+
     magnitudes
 }
 
 /// Convert audio waveform to log mel spectrogram for Whisper
-/// 
+///
 /// # Arguments
 /// * `audio` - Audio samples (should be 16kHz mono)
 /// * `sample_rate` - Sample rate of the audio
-/// 
+///
 /// # Returns
 /// Log mel spectrogram as a flat vector (n_mels x n_frames)
 pub fn audio_to_mel(audio: &[f32], sample_rate: u32) -> Result<Vec<f32>, String> {
     if audio.is_empty() {
         return Err("Empty audio input".to_string());
     }
-    
+
     // Resample to Whisper's expected rate if necessary
     let audio = if sample_rate != WHISPER_SAMPLE_RATE {
         resample_audio(audio, sample_rate, WHISPER_SAMPLE_RATE)?
     } else {
         audio.to_vec()
     };
-    
+
     // Pad or truncate to chunk length
     let mut padded_audio = audio;
     if padded_audio.len() < CHUNK_LENGTH {
@@ -291,20 +287,20 @@ pub fn audio_to_mel(audio: &[f32], sample_rate: u32) -> Result<Vec<f32>, String>
     } else if padded_audio.len() > CHUNK_LENGTH {
         padded_audio.truncate(CHUNK_LENGTH);
     }
-    
+
     // Compute STFT magnitude spectrum
     let stft = compute_stft_magnitude(&padded_audio, N_FFT, HOP_LENGTH);
-    
+
     if stft.is_empty() {
         return Err("Failed to compute STFT".to_string());
     }
-    
+
     // Create mel filterbank
     let filterbank = create_mel_filterbank(N_MEL_BINS, N_FFT, WHISPER_SAMPLE_RATE);
-    
+
     // Apply mel filterbank and convert to log scale
     let mut mel_spec = Vec::with_capacity(N_MEL_BINS * stft.len());
-    
+
     for frame in &stft {
         for filter in &filterbank {
             let mut sum = 0.0f32;
@@ -319,15 +315,15 @@ pub fn audio_to_mel(audio: &[f32], sample_rate: u32) -> Result<Vec<f32>, String>
             mel_spec.push(log_mel);
         }
     }
-    
+
     // Normalize to match Whisper's expected range
     let max_val = mel_spec.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
     let min_val = max_val - 8.0; // Dynamic range of 8 (about 80dB)
-    
+
     for val in &mut mel_spec {
         *val = ((*val - min_val) / (max_val - min_val)).clamp(0.0, 1.0) * 2.0 - 1.0;
     }
-    
+
     Ok(mel_spec)
 }
 
@@ -386,6 +382,6 @@ mod tests {
         let mut audio = vec![0.5, -1.0, 0.25, 0.0];
         normalize_audio(&mut audio);
         assert_eq!(audio[1], -1.0); // Max should be normalized to +-1
-        assert_eq!(audio[0], 0.5);  // Others should scale proportionally
+        assert_eq!(audio[0], 0.5); // Others should scale proportionally
     }
 }

@@ -51,3 +51,6 @@ rubato = { workspace = true }
 
 # getrandom for WASM
 getrandom = { workspace = true }
+
+# Burn ndarray backend
+burn-ndarray = { workspace = true }

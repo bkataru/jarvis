@@ -4,7 +4,8 @@ use leptos::prelude::*;
 #[component]
 pub fn JarvisRing(
     /// Whether the ring is active/pulsing
-    #[prop(default = false)] active: bool,
+    #[prop(default = false)]
+    active: bool,
 ) -> impl IntoView {
     let ring_class = if active {
         "animate-pulse ring-4 ring-blue-500"

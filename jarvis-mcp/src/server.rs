@@ -2,9 +2,7 @@
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{
-    HtmlCanvasElement, HtmlVideoElement, MediaStream, MediaStreamConstraints,
-};
+use web_sys::{HtmlCanvasElement, HtmlVideoElement, MediaStream, MediaStreamConstraints};
 
 /// Memories server for storing conversation context
 pub struct MemoriesServer {
@@ -96,22 +94,22 @@ impl CameraServer {
         let window = web_sys::window().ok_or("No window found")?;
         let document = window.document().ok_or("No document found")?;
         let navigator = window.navigator();
-        
+
         // Get media devices
         let media_devices = navigator
             .media_devices()
             .map_err(|_| "No media devices available")?;
-        
+
         // Request camera access with video only
         let constraints = MediaStreamConstraints::new();
         constraints.set_video(&JsValue::from(true));
         constraints.set_audio(&JsValue::from(false));
-        
+
         let promise = media_devices.get_user_media_with_constraints(&constraints)?;
         let stream = wasm_bindgen_futures::JsFuture::from(promise)
             .await?
             .dyn_into::<MediaStream>()?;
-        
+
         // Create hidden video element
         let video = document
             .create_element("video")?
@@ -120,45 +118,43 @@ impl CameraServer {
         video.set_muted(true);
         video.set_attribute("playsinline", "true")?;
         video.style().set_property("display", "none")?;
-        
+
         // Attach stream to video
         video.set_src_object(Some(&stream));
-        
+
         // Wait for video to be ready
         let promise = video.play()?;
         wasm_bindgen_futures::JsFuture::from(promise).await?;
-        
+
         // Create canvas for capture
         let canvas = document
             .create_element("canvas")?
             .dyn_into::<HtmlCanvasElement>()?;
-        
+
         self.video = Some(video);
         self.stream = Some(stream);
         self.canvas = Some(canvas);
-        
+
         log::info!("Camera initialized successfully");
         Ok(())
     }
 
     /// Take a picture and return as PNG bytes
     pub async fn take_picture(&self) -> Result<Vec<u8>, String> {
-        let video = self.video.as_ref()
-            .ok_or("Camera not initialized")?;
-        let canvas = self.canvas.as_ref()
-            .ok_or("Canvas not initialized")?;
-        
+        let video = self.video.as_ref().ok_or("Camera not initialized")?;
+        let canvas = self.canvas.as_ref().ok_or("Canvas not initialized")?;
+
         // Set canvas size to video dimensions
         let width = video.video_width();
         let height = video.video_height();
-        
+
         if width == 0 || height == 0 {
             return Err("Video dimensions not available".to_string());
         }
-        
+
         canvas.set_width(width);
         canvas.set_height(height);
-        
+
         // Draw video frame to canvas
         let context = canvas
             .get_context("2d")
@@ -166,53 +162,56 @@ impl CameraServer {
             .ok_or("No 2D context available")?
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
             .map_err(|_| "Failed to cast to CanvasRenderingContext2d")?;
-        
+
         context
             .draw_image_with_html_video_element(video, 0.0, 0.0)
             .map_err(|_| "Failed to draw video to canvas")?;
-        
+
         // Get image data as PNG data URL
         let data_url = canvas
             .to_data_url_with_type("image/png")
             .map_err(|_| "Failed to get data URL")?;
-        
+
         // Convert data URL to bytes
         // Format: data:image/png;base64,<base64data>
         let base64_data = data_url
             .strip_prefix("data:image/png;base64,")
             .ok_or("Invalid data URL format")?;
-        
+
         // Decode base64 using web APIs
         let window = web_sys::window().ok_or("No window")?;
         let decoded = window
             .atob(base64_data)
             .map_err(|_| "Failed to decode base64")?;
-        
+
         // Convert to bytes
         let bytes: Vec<u8> = decoded.chars().map(|c| c as u8).collect();
-        
-        log::info!("Captured image: {}x{}, {} bytes", width, height, bytes.len());
+
+        log::info!(
+            "Captured image: {}x{}, {} bytes",
+            width,
+            height,
+            bytes.len()
+        );
         Ok(bytes)
     }
 
     /// Take a picture and return as base64 string
     pub async fn take_picture_base64(&self) -> Result<String, String> {
-        let video = self.video.as_ref()
-            .ok_or("Camera not initialized")?;
-        let canvas = self.canvas.as_ref()
-            .ok_or("Canvas not initialized")?;
-        
+        let video = self.video.as_ref().ok_or("Camera not initialized")?;
+        let canvas = self.canvas.as_ref().ok_or("Canvas not initialized")?;
+
         // Set canvas size to video dimensions
         let width = video.video_width();
         let height = video.video_height();
-        
+
         if width == 0 || height == 0 {
             return Err("Video dimensions not available".to_string());
         }
-        
+
         canvas.set_width(width);
         canvas.set_height(height);
-        
+
         // Draw video frame to canvas
         let context = canvas
             .get_context("2d")
@@ -220,11 +219,11 @@ impl CameraServer {
             .ok_or("No 2D context available")?
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
             .map_err(|_| "Failed to cast to CanvasRenderingContext2d")?;
-        
+
         context
             .draw_image_with_html_video_element(video, 0.0, 0.0)
             .map_err(|_| "Failed to draw video to canvas")?;
-        
+
         // Get image data as data URL
         canvas
             .to_data_url_with_type("image/png")
@@ -287,7 +286,7 @@ mod tests {
         server.store("Second".to_string());
         server.store("Third".to_string());
         server.store("Fourth".to_string());
-        
+
         assert_eq!(server.count(), 3);
         assert_eq!(server.retrieve()[0], "Second");
     }
@@ -298,7 +297,7 @@ mod tests {
         server.store("Meeting with John".to_string());
         server.store("Lunch appointment".to_string());
         server.store("Meeting notes".to_string());
-        
+
         let results = server.search("meeting");
         assert_eq!(results.len(), 2);
     }
@@ -309,7 +308,7 @@ mod tests {
         server.store("First".to_string());
         server.store("Second".to_string());
         server.store("Third".to_string());
-        
+
         let recent = server.retrieve_recent(2);
         assert_eq!(recent.len(), 2);
         assert_eq!(recent[0], "Second");

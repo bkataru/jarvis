@@ -17,14 +17,14 @@ pub fn ChatPage() -> impl IntoView {
 
     // Create AI service
     let ai_service = Rc::new(AiService::new());
-    
+
     // Initialize model on mount
     let ai_service_init = ai_service.clone();
-    let _ = {
+    {
         let service = ai_service_init.clone();
         leptos::task::spawn_local(async move {
             set_model_status.set("Loading model...".to_string());
-            match service.load_model(ModelType::TinyLlama).await {
+            match service.load_model(ModelType::TinyLlama) {
                 Ok(_) => {
                     set_model_status.set("Model ready".to_string());
                     log::info!("Model loaded successfully");
@@ -35,7 +35,7 @@ pub fn ChatPage() -> impl IntoView {
                 }
             }
         });
-    };
+    }
 
     let ai_service_send = ai_service.clone();
     let do_send = Rc::new(move || {
@@ -53,10 +53,10 @@ pub fn ChatPage() -> impl IntoView {
 
         let service = ai_service_send.clone();
         let msgs = messages.get();
-        
+
         leptos::task::spawn_local(async move {
             // Try to generate response using AI
-            match service.generate(&msgs).await {
+            match service.generate(&msgs) {
                 Ok(response_text) => {
                     let response = Message::assistant(response_text);
                     set_messages.update(|msgs| msgs.push(response));
@@ -76,7 +76,8 @@ pub fn ChatPage() -> impl IntoView {
                         log::warn!("AI generation error: {}", e);
                         set_error.set(Some(e.clone()));
                         Message::assistant(format!(
-                            "I encountered an issue: {}. Please try again.", e
+                            "I encountered an issue: {}. Please try again.",
+                            e
                         ))
                     };
                     set_messages.update(|msgs| msgs.push(fallback));

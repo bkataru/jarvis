@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Application state management
 //!
 //! This module provides global state management for the JARVIS application
@@ -6,8 +7,8 @@
 use jarvis_ai::{InferenceConfig, InferenceEngine, Message, ModelType};
 use jarvis_mcp::{McpClient, McpServerConfig};
 use leptos::prelude::*;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 /// Global application state
 #[derive(Clone)]
@@ -110,21 +111,19 @@ impl AiService {
     }
 
     /// Load a model
-    pub async fn load_model(&self, model: ModelType) -> Result<(), String> {
+    pub fn load_model(&self, model: ModelType) -> Result<(), String> {
         let mut engine = self.engine.borrow_mut();
-        engine.load_model(model).await
+        engine.load_model(model)
     }
 
     /// Generate a response from messages
-    pub async fn generate(&self, messages: &[Message]) -> Result<String, String> {
-        let engine = self.engine.borrow();
-        engine.generate(messages).await
+    pub fn generate(&self, messages: &[Message]) -> Result<String, String> {
+        self.engine.borrow().generate(messages)
     }
 
     /// Transcribe audio
-    pub async fn transcribe(&self, audio: &[f32]) -> Result<String, String> {
-        let engine = self.engine.borrow();
-        engine.transcribe(audio).await
+    pub fn transcribe(&self, audio: &[f32]) -> Result<String, String> {
+        self.engine.borrow().transcribe(audio)
     }
 
     /// Check if model is ready

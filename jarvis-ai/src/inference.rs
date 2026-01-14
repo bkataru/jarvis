@@ -3,9 +3,12 @@
 //! This module provides the inference engine that powers JARVIS's AI capabilities.
 //! It uses the Burn ML framework which supports both CPU (ndarray) and GPU (WebGPU) backends.
 
-use crate::models::ModelType;
+use crate::models::{ModelType, download_model};
 use crate::types::Message;
+use burn::prelude::*;
+use burn_ndarray::NdArray;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 /// Model loading state
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,14 +44,29 @@ impl Default for InferenceConfig {
     }
 }
 
+/// Trait for a generic model that can run inference
+pub trait JarvisModel<B: Backend>: Send + Sync {
+    /// Transcribe audio to text
+    fn transcribe(&self, audio: &[f32]) -> Result<String, String>;
+    
+    /// Generate text from messages
+    fn generate(&self, messages: &[Message]) -> Result<String, String>;
+    
+    /// Get model metadata
+    fn model_type(&self) -> ModelType;
+}
+
 /// Inference engine for running models
-/// 
+///
 /// The engine is generic over the Burn backend, allowing it to work with
 /// different computation backends (ndarray for CPU, wgpu for WebGPU).
 pub struct InferenceEngine {
     model_type: Option<ModelType>,
     model_state: ModelState,
     config: InferenceConfig,
+    model: Option<Arc<Mutex<dyn JarvisModel<NdArray<f32>>>>>,
+    model_data: Option<Vec<u8>>,
+    loading_progress: Option<(u64, u64)>,
 }
 
 impl InferenceEngine {
@@ -58,6 +76,9 @@ impl InferenceEngine {
             model_type: None,
             model_state: ModelState::Unloaded,
             config: InferenceConfig::default(),
+            model: None,
+            model_data: None,
+            loading_progress: None,
         }
     }
 
@@ -67,99 +88,120 @@ impl InferenceEngine {
             model_type: None,
             model_state: ModelState::Unloaded,
             config,
+            model: None,
+            model_data: None,
+            loading_progress: None,
         }
     }
 
     /// Load a model for inference
-    /// 
+    ///
     /// # Arguments
     /// * `model` - The type of model to load
-    /// 
+    ///
     /// # Returns
     /// * `Ok(())` if the model was loaded successfully
     /// * `Err(String)` if loading failed
-    pub async fn load_model(&mut self, model: ModelType) -> Result<(), String> {
+    pub fn load_model(&mut self, model: ModelType) -> Result<(), String> {
         log::info!("Loading model: {:?}", model);
         self.model_state = ModelState::Loading;
-        
-        // TODO: Implement actual model loading with Burn
-        // This will involve:
-        // 1. Fetching the model weights from a CDN or IndexedDB cache
-        // 2. Deserializing the weights into Burn tensors
-        // 3. Building the model architecture
-        // 4. Loading the weights into the model
-        
-        // For now, simulate successful loading
         self.model_type = Some(model);
-        self.model_state = ModelState::Ready;
         
-        log::info!("Model {:?} loaded successfully", model);
         Ok(())
+    }
+
+    /// Start downloading a model asynchronously
+    pub async fn download_model(&mut self, model: ModelType, on_progress: impl Fn(u64, u64)) -> Result<(), String> {
+        log::info!("Downloading model: {:?}", model);
+        self.model_state = ModelState::Loading;
+        self.model_type = Some(model);
+
+        let data = download_model(model, |progress| {
+            on_progress(progress.loaded_bytes, progress.total_bytes);
+        }).await?;
+
+        self.model_data = Some(data);
+        Ok(())
+    }
+
+    /// Initialize the model with downloaded data
+    pub fn initialize_model(&mut self) -> Result<(), String> {
+        log::info!("Initializing model");
+        match self.model_type {
+            Some(model_type) => {
+                // For now, create a mock model
+                // TODO: Replace with real Burn model initialization when available
+                let mock_model = MockWhisperModel::new(model_type);
+                self.model = Some(Arc::new(Mutex::new(mock_model)));
+                self.model_state = ModelState::Ready;
+                log::info!("Mock model initialized successfully");
+                Ok(())
+            }
+            None => Err("No model type specified".to_string()),
+        }
     }
 
     /// Unload the current model
     pub fn unload_model(&mut self) {
         self.model_type = None;
         self.model_state = ModelState::Unloaded;
+        self.model = None;
+        self.model_data = None;
+        self.loading_progress = None;
         log::info!("Model unloaded");
     }
 
     /// Run speech-to-text inference using Whisper
-    /// 
+    ///
     /// # Arguments
     /// * `audio` - Audio samples as f32 values (16kHz, mono)
-    /// 
+    ///
     /// # Returns
     /// * `Ok(String)` containing the transcribed text
     /// * `Err(String)` if transcription failed
-    pub async fn transcribe(&self, audio: &[f32]) -> Result<String, String> {
+    pub fn transcribe(&self, audio: &[f32]) -> Result<String, String> {
         if self.model_state != ModelState::Ready {
             return Err("Model not loaded".to_string());
         }
 
-        match self.model_type {
-            Some(ModelType::WhisperTiny) | 
-            Some(ModelType::WhisperBase) | 
-            Some(ModelType::WhisperSmall) => {
-                // TODO: Implement Whisper inference with Burn
-                // This will involve:
-                // 1. Converting audio to mel spectrogram
-                // 2. Running the encoder
-                // 3. Running the decoder with beam search
-                // 4. Decoding tokens to text
-                log::info!("Transcribing {} audio samples", audio.len());
-                Err("Whisper transcription not yet implemented with Burn".to_string())
+        if let Some(ref model) = self.model {
+            let model = model.lock().unwrap();
+            match self.model_type {
+                Some(ModelType::WhisperTiny)
+                | Some(ModelType::WhisperBase)
+                | Some(ModelType::WhisperSmall) => {
+                    model.transcribe(audio)
+                }
+                _ => Err("No speech-to-text model loaded".to_string()),
             }
-            _ => Err("No speech-to-text model loaded".to_string()),
+        } else {
+            Err("Model not initialized".to_string())
         }
     }
 
     /// Run text generation inference using an LLM
-    /// 
+    ///
     /// # Arguments
     /// * `messages` - Conversation history
-    /// 
+    ///
     /// # Returns
     /// * `Ok(String)` containing the generated response
     /// * `Err(String)` if generation failed
-    pub async fn generate(&self, messages: &[Message]) -> Result<String, String> {
+    pub fn generate(&self, messages: &[Message]) -> Result<String, String> {
         if self.model_state != ModelState::Ready {
             return Err("Model not loaded".to_string());
         }
 
-        match self.model_type {
-            Some(ModelType::Phi2) | Some(ModelType::TinyLlama) => {
-                // TODO: Implement LLM inference with Burn
-                // This will involve:
-                // 1. Tokenizing the input messages
-                // 2. Building the attention mask
-                // 3. Running forward passes with KV cache
-                // 4. Sampling from the output distribution
-                // 5. Decoding tokens to text
-                log::info!("Generating response for {} messages", messages.len());
-                Err("LLM generation not yet implemented with Burn".to_string())
+        if let Some(ref model) = self.model {
+            let model = model.lock().unwrap();
+            match self.model_type {
+                Some(ModelType::Phi2) | Some(ModelType::TinyLlama) => {
+                    model.generate(messages)
+                }
+                _ => Err("No text generation model loaded".to_string()),
             }
-            _ => Err("No text generation model loaded".to_string()),
+        } else {
+            Err("Model not initialized".to_string())
         }
     }
 
@@ -192,11 +234,59 @@ impl InferenceEngine {
     pub fn set_config(&mut self, config: InferenceConfig) {
         self.config = config;
     }
+
+    /// Get the download progress if model is loading
+    pub fn loading_progress(&self) -> Option<(u64, u64)> {
+        self.loading_progress
+    }
+
+    /// Set loading progress
+    pub fn set_loading_progress(&mut self, loaded: u64, total: u64) {
+        self.loading_progress = Some((loaded, total));
+    }
+
+    /// Check if model data is available
+    pub fn has_model_data(&self) -> bool {
+        self.model_data.is_some()
+    }
 }
 
 impl Default for InferenceEngine {
     fn default() -> Self {
         Self::new()
+    }
+}
+/// Mock model for testing
+pub struct MockWhisperModel {
+    model_type: ModelType,
+}
+
+impl MockWhisperModel {
+    /// Create a new mock Whisper model
+    pub fn new(model_type: ModelType) -> Self {
+        Self { model_type }
+    }
+}
+
+impl JarvisModel<NdArray<f32>> for MockWhisperModel {
+    fn transcribe(&self, audio: &[f32]) -> Result<String, String> {
+        log::info!("Mock transcribing {} audio samples", audio.len());
+        // Mock transcription - in real implementation this would:
+        // 1. Convert audio to mel spectrogram
+        // 2. Run encoder
+        // 3. Run decoder with beam search
+        // 4. Decode tokens
+        Ok(format!("Mock transcription: {} samples processed", audio.len()))
+    }
+    
+    fn generate(&self, messages: &[Message]) -> Result<String, String> {
+        log::info!("Mock generating response for {} messages", messages.len());
+        // Mock generation
+        Ok("Mock response: JARVIS is currently in development. AI inference with Burn is being implemented.".to_string())
+    }
+    
+    fn model_type(&self) -> ModelType {
+        self.model_type
     }
 }
 

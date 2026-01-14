@@ -10,21 +10,16 @@ pub fn MessageView(message: Message) -> impl IntoView {
     } else {
         "bg-gray-700"
     };
-    let align_class = if is_user {
-        "ml-auto"
-    } else {
-        "mr-auto"
-    };
+    let align_class = if is_user { "ml-auto" } else { "mr-auto" };
 
     let content = message
         .message_parts
         .iter()
-        .filter_map(|part| match part {
-            MessagePart::Text(text_part) => Some(text_part.text.clone()),
-            MessagePart::ToolCall(tool_part) => Some(format!(
-                "[Tool: {}] {}",
-                tool_part.function_name, tool_part.response
-            )),
+        .map(|part| match part {
+            MessagePart::Text(text_part) => text_part.text.clone(),
+            MessagePart::ToolCall(tool_part) => {
+                format!("[Tool: {}] {}", tool_part.function_name, tool_part.response)
+            }
         })
         .collect::<Vec<_>>()
         .join("\n");

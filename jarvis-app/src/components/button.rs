@@ -6,11 +6,14 @@ pub fn Button(
     /// Button text
     children: Children,
     /// Click handler
-    #[prop(optional)] on_click: Option<Box<dyn Fn() + 'static>>,
+    #[prop(optional)]
+    on_click: Option<Box<dyn Fn() + 'static>>,
     /// Whether button is disabled
-    #[prop(default = false)] disabled: bool,
+    #[prop(default = false)]
+    disabled: bool,
     /// Button variant
-    #[prop(default = ButtonVariant::Primary)] variant: ButtonVariant,
+    #[prop(default = ButtonVariant::Primary)]
+    variant: ButtonVariant,
 ) -> impl IntoView {
     let class = match variant {
         ButtonVariant::Primary => "bg-blue-600 hover:bg-blue-700 text-white",
@@ -40,5 +43,6 @@ pub fn Button(
 pub enum ButtonVariant {
     Primary,
     Secondary,
+    #[allow(dead_code)]
     Danger,
 }

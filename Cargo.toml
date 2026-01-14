@@ -44,6 +44,7 @@ getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] 
 
 # AI/ML - Burn framework with WASM/WebGPU support
 burn = { version = "0.19", default-features = false }
+burn-ndarray = "0.19"
 
 # Audio processing
 rubato = "0.16"

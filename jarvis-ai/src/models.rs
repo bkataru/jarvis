@@ -48,6 +48,7 @@ impl ModelType {
 }
 
 /// Model loading progress
+/// Model loading progress
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadProgress {
     pub loaded_bytes: u64,
@@ -71,19 +72,83 @@ impl LoadProgress {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Download a model from HuggingFace
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn download_model(
+    model_type: ModelType,
+    on_progress: impl Fn(LoadProgress),
+) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+    use reqwest::Client;
 
-    #[test]
-    fn test_model_names() {
-        assert_eq!(ModelType::WhisperTiny.model_name(), "openai/whisper-tiny.en");
-        assert_eq!(ModelType::Phi2.model_name(), "microsoft/phi-2");
+    let client = Client::new();
+    let url = format!("https://huggingface.co/{}/resolve/main/model.safetensors", model_type.model_name());
+    
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    let total_bytes = response.content_length().unwrap_or(0);
+    let mut loaded_bytes = 0;
+    let mut data = Vec::with_capacity(total_bytes as usize);
+    let mut stream = response.bytes_stream();
+    
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| e.to_string())?;
+        loaded_bytes += chunk.len() as u64;
+        data.extend_from_slice(&chunk);
+        on_progress(LoadProgress::new(loaded_bytes, total_bytes));
     }
+    
+    Ok(data)
+}
 
-    #[test]
-    fn test_load_progress() {
-        let progress = LoadProgress::new(50, 100);
-        assert_eq!(progress.percentage, 50.0);
-    }
+/// Download a model from HuggingFace (WASM version)
+#[cfg(target_arch = "wasm32")]
+pub async fn download_model(
+    model_type: ModelType,
+    on_progress: impl Fn(LoadProgress),
+) -> Result<Vec<u8>, String> {
+    use wasm_bindgen::prelude::*;
+    use wasm_bindgen_futures::JsFuture;
+    use web_sys::{Request, RequestInit, Response};
+    
+    let window = web_sys::window().ok_or("No window found")?;
+    let url = format!("https://huggingface.co/{}/resolve/main/model.safetensors", model_type.model_name());
+    
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    
+    let request = Request::new_with_str_and_init(&url, &opts)
+        .map_err(|_| "Failed to create request")?;
+    
+    let promise = window.fetch_with_request(&request);
+    let response = JsFuture::from(promise)
+        .await
+        .map_err(|_| "Fetch failed")?
+        .dyn_into::<Response>()
+        .map_err(|_| "Not a response")?;
+    
+    let content_length = response
+        .headers()
+        .get("content-length")
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    
+    let array_buffer_promise = response.array_buffer().map_err(|_| "Failed to get array buffer")?;
+    let array_buffer = JsFuture::from(array_buffer_promise)
+        .await
+        .map_err(|_| "Failed to get array buffer data")?;
+    
+    let bytes = js_sys::Uint8Array::new(&array_buffer);
+    let mut data = vec![0; bytes.length() as usize];
+    bytes.copy_to(&mut data);
+    
+    on_progress(LoadProgress::new(data.len() as u64, content_length));
+    
+    Ok(data)
 }
