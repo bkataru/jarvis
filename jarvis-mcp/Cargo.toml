@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "Model Context Protocol client for JARVIS"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -28,6 +29,5 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 uuid = { workspace = true }
 
-[dependencies.getrandom]
-version = "0.2"
-features = ["js"]
+# getrandom for WASM
+getrandom = { workspace = true }

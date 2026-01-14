@@ -30,7 +30,7 @@ impl AudioCapture {
             .map_err(|_| "No media devices available")?;
 
         // Request microphone access
-        let mut constraints = web_sys::MediaStreamConstraints::new();
+        let constraints = web_sys::MediaStreamConstraints::new();
         constraints.set_audio(&JsValue::from(true));
         constraints.set_video(&JsValue::from(false));
 

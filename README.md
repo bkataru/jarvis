@@ -2,31 +2,31 @@
 
 A modern AI assistant web application built entirely in Rust and compiled to WebAssembly. This is a recreation of the original [nico-martin/jarvis](https://github.com/nico-martin/jarvis) TypeScript/Preact application, featuring voice interaction, real-time conversation, and MCP (Model Context Protocol) server integration.
 
-## ✨ Features
+## Features
 
-- **🎤 Voice Interaction**: Voice activity detection, speech-to-text (Whisper), and text-to-speech capabilities
-- **💬 Real-time Chat**: Interactive conversation interface with AI assistant
-- **🔌 MCP Server Integration**: Connect and interact with Model Context Protocol servers
-- **🖼️ Image-to-Text**: Convert images to text descriptions (planned)
-- **🎨 Multi-modal Interface**: Switch between voice-activated JARVIS mode and traditional chat
-- **🦀 Pure Rust/WASM**: Runs locally in your browser with no external dependencies
-- **⚡ WebGPU Ready**: Prepared for GPU-accelerated inference (when Candle adds support)
+- **Voice Interaction**: Voice activity detection, speech-to-text (Whisper), and text-to-speech capabilities
+- **Real-time Chat**: Interactive conversation interface with AI assistant
+- **MCP Server Integration**: Connect and interact with Model Context Protocol servers
+- **Image-to-Text**: Convert images to text descriptions (planned)
+- **Multi-modal Interface**: Switch between voice-activated JARVIS mode and traditional chat
+- **Pure Rust/WASM**: Runs locally in your browser with no external dependencies
+- **WebGPU Ready**: GPU-accelerated inference via Burn's wgpu backend
 
-## 🏗️ Architecture
+## Architecture
 
 This application is built with a modular architecture:
 
 ```
 jarvis/
 ├── jarvis-app/     # Main Leptos-based web application
-├── jarvis-ai/      # AI inference engine (Candle-based)
+├── jarvis-ai/      # AI inference engine (Burn-based)
 └── jarvis-mcp/     # Model Context Protocol client
 ```
 
 ### Tech Stack
 
 - **Frontend Framework**: [Leptos](https://leptos.dev/) - Reactive Rust web framework
-- **AI/ML Engine**: [Candle](https://github.com/huggingface/candle) - ML framework in Rust
+- **AI/ML Engine**: [Burn](https://burn.dev/) - ML framework in Rust with WASM/WebGPU support
 - **Build Tool**: [Trunk](https://trunkrs.dev/) - WASM web application bundler
 - **Styling**: Tailwind CSS (via CDN)
 - **MCP**: Custom implementation based on Model Context Protocol
@@ -40,7 +40,16 @@ The application uses quantized models optimized for browser deployment:
 - **Text Generation**: TinyLlama 1.1B or Phi-2 (600-1500 MB quantized)
 - **Voice Activity Detection**: Custom implementation
 
-## 🚀 Getting Started
+### Backend Options
+
+The AI engine supports multiple backends via Burn:
+
+| Backend | Feature Flag | Description |
+|---------|--------------|-------------|
+| ndarray | `ndarray` (default) | CPU backend, works everywhere |
+| WebGPU | `wgpu` | GPU acceleration in modern browsers |
+
+## Getting Started
 
 ### Prerequisites
 
@@ -78,7 +87,15 @@ trunk build --release
 
 The optimized build will be in the `dist/` directory.
 
-## 📖 Usage
+### Building with WebGPU Support
+
+To enable GPU acceleration (requires WebGPU-compatible browser):
+
+```bash
+trunk build --release --features wgpu
+```
+
+## Usage
 
 ### JARVIS Voice Mode
 
@@ -98,7 +115,7 @@ The optimized build will be in the `dist/` directory.
 2. Add HTTP-based MCP servers by providing name and URL
 3. Enable/disable servers and specific tools as needed
 
-## 🧪 Testing
+## Testing
 
 Run the test suite:
 
@@ -114,7 +131,7 @@ cargo test -p jarvis-mcp
 cargo test -p jarvis-app
 ```
 
-## 📝 Development
+## Development
 
 ### Project Structure
 
@@ -135,7 +152,7 @@ jarvis-app/src/
 jarvis-ai/src/
 ├── agent.rs        # JARVIS agent & prompts
 ├── audio.rs        # Audio capture & processing
-├── inference.rs    # Model inference engine
+├── inference.rs    # Model inference engine (Burn)
 ├── models.rs       # Model definitions
 ├── types.rs        # Type definitions
 └── lib.rs          # Module exports
@@ -169,24 +186,24 @@ And linting:
 cargo clippy --all --all-targets
 ```
 
-## 🛣️ Roadmap
+## Roadmap
 
 - [x] Basic application structure
 - [x] Leptos UI framework integration
 - [x] MCP client foundation
-- [ ] Candle model loading
-- [ ] Whisper speech-to-text
-- [ ] LLM text generation
+- [x] Burn ML framework integration
+- [ ] Whisper speech-to-text implementation
+- [ ] LLM text generation implementation
 - [ ] Voice activity detection
 - [ ] Text-to-speech synthesis
-- [ ] WebGPU acceleration (when available in Candle)
+- [ ] WebGPU acceleration
 - [ ] Progressive model loading
 - [ ] IndexedDB/Cache API for models
 - [ ] Web Workers for inference
 - [ ] Image-to-text capabilities
 - [ ] Full MCP server support
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 This project is a Rust recreation of the original JARVIS application:
 
@@ -197,7 +214,7 @@ This project is a Rust recreation of the original JARVIS application:
 ### Dependencies & Frameworks
 
 - **[Leptos](https://leptos.dev/)** - Reactive web framework for Rust
-- **[Candle](https://github.com/huggingface/candle)** - ML framework by Hugging Face
+- **[Burn](https://burn.dev/)** - ML framework with WASM/WebGPU support
 - **[Trunk](https://trunkrs.dev/)** - WASM web application bundler
 - **[wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/)** - JavaScript/Rust interop
 - **[web-sys](https://rustwasm.github.io/wasm-bindgen/web-sys/)** - Web API bindings
@@ -206,20 +223,20 @@ This project is a Rust recreation of the original JARVIS application:
 
 ### Inspiration & References
 
-- **Research Report**: Based on "Building browser-based AI inference in pure Rust/WASM"
-- **Candle WASM Examples**: [Hugging Face Spaces](https://huggingface.co/collections/radames/candle-wasm-examples-650898dee13ff96230ce3e1f)
+- **Burn WASM Examples**: [tracel-ai/burn](https://github.com/tracel-ai/burn/tree/main/examples)
+- **Whisper-Burn**: [Gadersd/whisper-burn](https://github.com/Gadersd/whisper-burn)
 - **Model Context Protocol**: [MCP Specification](https://modelcontextprotocol.io/)
 - **Transformers.js**: Reference for browser-based AI
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2024 Bhargav Kataru
+Copyright (c) 2025 Baalateja Kataru
 
 Based on JARVIS by Nicolas Martin (mail@nico.dev)
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -229,12 +246,12 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📧 Contact
+## Contact
 
-Bhargav Kataru - [@bkataru](https://github.com/bkataru)
+Baalateja Kataru - [@bkataru](https://github.com/bkataru)
 
 Project Link: [https://github.com/bkataru/jarvis](https://github.com/bkataru/jarvis)
 
 ---
 
-**Note**: This is a work in progress. Many features are still being implemented. The current version provides the foundational structure and UI, with AI capabilities being actively developed.
+**Note**: This is a work in progress. The current version provides the foundational structure, UI, and Burn framework integration. Model inference implementations are being actively developed. See the [Whisper-Burn](https://github.com/Gadersd/whisper-burn) project for a community Whisper implementation that can be adapted.

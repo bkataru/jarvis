@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "JARVIS web application built with Leptos"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -52,6 +53,5 @@ anyhow = { workspace = true }
 jarvis-ai = { path = "../jarvis-ai" }
 jarvis-mcp = { path = "../jarvis-mcp" }
 
-[dependencies.getrandom]
-version = "0.2"
-features = ["js"]
+# getrandom for WASM
+getrandom = { workspace = true }

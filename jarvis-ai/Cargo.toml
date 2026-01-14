@@ -4,11 +4,23 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "AI inference engine for JARVIS using Burn ML framework"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = ["ndarray"]
+# CPU backend (default, works everywhere in WASM)
+ndarray = ["burn/ndarray"]
+# WebGPU backend (GPU acceleration in browser)
+wgpu = ["burn/wgpu", "burn/webgpu"]
+
 [dependencies]
+# AI/ML - Burn framework
+burn = { workspace = true }
+
+# WASM bindings
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 web-sys = { workspace = true, features = [
@@ -22,24 +34,20 @@ web-sys = { workspace = true, features = [
     "BlobEvent",
 ] }
 js-sys = { workspace = true }
+
+# Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
+
+# Utilities
 log = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 uuid = { workspace = true }
 
-# AI/ML dependencies - temporarily commented out
-# Will be re-enabled once Candle WASM dependencies are resolved
-# candle-core = { workspace = true }
-# candle-nn = { workspace = true }
-# candle-transformers = { workspace = true }
-# hf-hub = { workspace = true }
-
 # Audio processing
 rubato = { workspace = true }
 
-[dependencies.getrandom]
-version = "0.2"
-features = ["js"]
+# getrandom for WASM
+getrandom = { workspace = true }
