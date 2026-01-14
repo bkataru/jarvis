@@ -3,8 +3,7 @@ use leptos::prelude::*;
 /// JARVIS ring animation component
 #[component]
 pub fn JarvisRing(
-    /// Whether the ring is active/pulsing
-    #[prop(default = false)]
+    #[prop(default = true)]
     active: bool,
 ) -> impl IntoView {
     let ring_class = if active {

@@ -3,15 +3,11 @@ use leptos::prelude::*;
 /// Button component with Tailwind styling
 #[component]
 pub fn Button(
-    /// Button text
     children: Children,
-    /// Click handler
     #[prop(optional)]
     on_click: Option<Box<dyn Fn() + 'static>>,
-    /// Whether button is disabled
     #[prop(default = false)]
     disabled: bool,
-    /// Button variant
     #[prop(default = ButtonVariant::Primary)]
     variant: ButtonVariant,
 ) -> impl IntoView {
