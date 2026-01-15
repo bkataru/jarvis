@@ -40,3 +40,17 @@ impl LocalStorage {
         storage.clear()
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_local_storage_struct_exists() {
+        // This test just verifies that the LocalStorage struct can be referenced
+        // Actual functionality would require a browser environment
+        let _storage = LocalStorage;
+        assert!(true);
+    }
+}

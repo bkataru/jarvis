@@ -29,12 +29,12 @@ impl McpClient {
     }
 
     /// Connect to the MCP server
-    pub async fn connect(&mut self) -> Result<(), String> {
+    pub async fn connect(&mut self) -> Result<(), McpClientError> {
         let url = self
             .config
             .url
             .as_ref()
-            .ok_or("Server URL not configured")?;
+            .ok_or(McpClientError::Config("Server URL not configured".to_string()))?;
 
         log::info!("Connecting to MCP server: {} at {}", self.config.name, url);
 
@@ -63,7 +63,7 @@ impl McpClient {
             Ok(response) => {
                 if let Some(error) = response.error {
                     log::error!("Server returned error: {}", error.message);
-                    return Err(format!("Server error: {}", error.message));
+                    return Err(McpClientError::Server(error.message));
                 }
 
                 log::info!("Successfully connected to MCP server: {}", self.config.name);
@@ -79,14 +79,14 @@ impl McpClient {
             }
             Err(e) => {
                 log::error!("Failed to connect to MCP server: {}", e);
-                Err(format!("Connection failed: {}", e))
+                Err(McpClientError::Connection(e.to_string()))
             }
         }
     }
 
     /// Refresh tools, resources, and prompts from the server
-    async fn refresh_capabilities(&mut self) -> Result<(), String> {
-        let transport = self.transport.as_ref().ok_or("Not connected")?;
+    async fn refresh_capabilities(&mut self) -> Result<(), McpClientError> {
+        let transport = self.transport.as_ref().ok_or(McpClientError::NotConnected)?;
 
         // List tools
         let tools_request = McpRequest {
@@ -161,20 +161,20 @@ impl McpClient {
     }
 
     /// List available tools
-    pub async fn list_tools(&self) -> Result<Vec<McpTool>, String> {
+    pub async fn list_tools(&self) -> Result<Vec<McpTool>, McpClientError> {
         if !self.state.connected {
-            return Err("Not connected to server".to_string());
+            return Err(McpClientError::NotConnected);
         }
         Ok(self.state.tools.clone())
     }
 
     /// Call a tool
-    pub async fn call_tool(&self, params: ToolCallParams) -> Result<ToolCallResult, String> {
+    pub async fn call_tool(&self, params: ToolCallParams) -> Result<ToolCallResult, McpClientError> {
         if !self.state.connected {
-            return Err("Not connected to server".to_string());
+            return Err(McpClientError::NotConnected);
         }
 
-        let transport = self.transport.as_ref().ok_or("Transport not initialized")?;
+        let transport = self.transport.as_ref().ok_or(McpClientError::Transport("Transport not initialized".to_string()))?;
 
         log::info!("Calling tool: {}", params.name);
 
@@ -198,10 +198,10 @@ impl McpClient {
                     });
                 }
 
-                let result = response
-                    .result
-                    .map(|r| serde_json::to_string(&r).unwrap_or_default())
-                    .unwrap_or_default();
+                let result = match response.result {
+                    Some(r) => serde_json::to_string(&r).map_err(McpClientError::from)?,
+                    None => String::new(),
+                };
 
                 Ok(ToolCallResult {
                     success: true,
@@ -212,26 +212,26 @@ impl McpClient {
             Err(e) => Ok(ToolCallResult {
                 success: false,
                 result: String::new(),
-                error: Some(e),
+                error: Some(e.to_string()),
             }),
         }
     }
 
     /// List available resources
-    pub async fn list_resources(&self) -> Result<Vec<McpResource>, String> {
+    pub async fn list_resources(&self) -> Result<Vec<McpResource>, McpClientError> {
         if !self.state.connected {
-            return Err("Not connected to server".to_string());
+            return Err(McpClientError::NotConnected);
         }
         Ok(self.state.resources.clone())
     }
 
     /// Read a resource
-    pub async fn read_resource(&self, uri: &str) -> Result<String, String> {
+    pub async fn read_resource(&self, uri: &str) -> Result<String, McpClientError> {
         if !self.state.connected {
-            return Err("Not connected to server".to_string());
+            return Err(McpClientError::NotConnected);
         }
 
-        let transport = self.transport.as_ref().ok_or("Transport not initialized")?;
+        let transport = self.transport.as_ref().ok_or(McpClientError::Transport("Transport not initialized".to_string()))?;
 
         let request = McpRequest {
             jsonrpc: "2.0".to_string(),
@@ -245,20 +245,21 @@ impl McpClient {
         let response = transport.send(request).await?;
 
         if let Some(error) = response.error {
-            return Err(error.message);
+            return Err(McpClientError::Server(error.message));
         }
 
         response
             .result
             .and_then(|r| r.get("contents").cloned())
-            .map(|c| serde_json::to_string(&c).unwrap_or_default())
-            .ok_or_else(|| "No content in response".to_string())
+            .map(|c| serde_json::to_string(&c).map_err(McpClientError::from))
+            .transpose()?
+            .ok_or_else(|| McpClientError::Resource("No content in response".to_string()))
     }
 
     /// List available prompts
-    pub async fn list_prompts(&self) -> Result<Vec<McpPrompt>, String> {
+    pub async fn list_prompts(&self) -> Result<Vec<McpPrompt>, McpClientError> {
         if !self.state.connected {
-            return Err("Not connected to server".to_string());
+            return Err(McpClientError::NotConnected);
         }
         Ok(self.state.prompts.clone())
     }
@@ -268,12 +269,12 @@ impl McpClient {
         &self,
         name: &str,
         arguments: Option<serde_json::Value>,
-    ) -> Result<String, String> {
+    ) -> Result<String, McpClientError> {
         if !self.state.connected {
-            return Err("Not connected to server".to_string());
+            return Err(McpClientError::NotConnected);
         }
 
-        let transport = self.transport.as_ref().ok_or("Transport not initialized")?;
+        let transport = self.transport.as_ref().ok_or(McpClientError::Transport("Transport not initialized".to_string()))?;
 
         let request = McpRequest {
             jsonrpc: "2.0".to_string(),
@@ -288,13 +289,14 @@ impl McpClient {
         let response = transport.send(request).await?;
 
         if let Some(error) = response.error {
-            return Err(error.message);
+            return Err(McpClientError::Server(error.message));
         }
 
         response
             .result
-            .map(|r| serde_json::to_string(&r).unwrap_or_default())
-            .ok_or_else(|| "No result in response".to_string())
+            .map(|r| serde_json::to_string(&r).map_err(McpClientError::from))
+            .transpose()?
+            .ok_or_else(|| McpClientError::Prompt("No result in response".to_string()))
     }
 
     /// Get server configuration

@@ -46,6 +46,9 @@ getrandom = { version = "0.3", default-features = false, features = ["wasm_js"] 
 burn = { version = "0.19", default-features = false }
 burn-ndarray = "0.19"
 
+# Safetensors for model weight loading
+safetensors = "0.4"
+
 # Audio processing
 rubato = "0.16"
 

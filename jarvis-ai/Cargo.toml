@@ -20,11 +20,17 @@ wgpu = ["burn/wgpu", "burn/webgpu"]
 # AI/ML - Burn framework
 burn = { workspace = true }
 
+# Safetensors for model weight loading
+safetensors = "0.4"
+
 # WASM bindings
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
+futures = { workspace = true }
 web-sys = { workspace = true, features = [
     "Window",
+    "Navigator",
+    "Headers",
     "AudioContext",
     "AudioBuffer",
     "MediaStream",
@@ -32,6 +38,10 @@ web-sys = { workspace = true, features = [
     "MediaRecorder",
     "Blob",
     "BlobEvent",
+    "Request",
+    "RequestInit",
+    "Response",
+    "MediaStreamConstraints",
 ] }
 js-sys = { workspace = true }
 
@@ -54,3 +64,8 @@ getrandom = { workspace = true }
 
 # Burn ndarray backend
 burn-ndarray = { workspace = true }
+
+# HTTP client for native builds
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { version = "0.12", features = ["stream"] }
+futures-util = "0.3"

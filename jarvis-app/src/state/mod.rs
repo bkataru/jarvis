@@ -159,7 +159,7 @@ impl McpService {
     /// Add a server configuration and connect
     pub async fn add_server(&self, config: McpServerConfig) -> Result<(), String> {
         let mut client = McpClient::new(config);
-        client.connect().await?;
+        client.connect().await.map_err(|e| e.to_string())?;
         self.clients.borrow_mut().push(client);
         Ok(())
     }

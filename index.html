@@ -1,35 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JARVIS - Your Personal AI Assistant</title>
-    <meta name="description" content="JARVIS - A sophisticated AI assistant built with Rust and WASM" />
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    
-    <style>
-      @keyframes pulse-ring {
-        0%, 100% {
-          opacity: 1;
-          transform: scale(1);
-        }
-        50% {
-          opacity: 0.7;
-          transform: scale(1.05);
-        }
-      }
-      
-      .animate-pulse {
-        animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="app"></div>
-  </body>
+ <head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <meta name="description" content="JARVIS - A sophisticated AI assistant built with Rust and WASM that runs entirely in your browser" />
+   <meta name="keywords" content="AI, assistant, Rust, WASM, WebAssembly, voice assistant, chatbot" />
+   <meta name="author" content="JARVIS Team" />
+   <title>JARVIS - Your Personal AI Assistant</title>
+   
+   <!-- Preload critical resources -->
+   <link rel="preload" href="/favicon.svg" as="image" type="image/svg+xml" />
+   
+   <!-- Tailwind CSS -->
+   <script src="https://cdn.tailwindcss.com"></script>
+   
+   <!-- Favicon -->
+   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+   <link rel="apple-touch-icon" href="/favicon.svg" />
+   
+   <style>
+     /* Focus management for accessibility */
+     :focus {
+       outline: 2px solid #3b82f6;
+       outline-offset: 2px;
+     }
+     
+     /* Skip navigation link for keyboard users */
+     .skip-link {
+       position: absolute;
+       top: -40px;
+       left: 6px;
+       background: #3b82f6;
+       color: white;
+       padding: 8px;
+       z-index: 1000;
+       border-radius: 4px;
+       transition: top 0.3s;
+     }
+     
+     .skip-link:focus {
+       top: 6px;
+     }
+     
+     @keyframes pulse-ring {
+       0%, 100% {
+         opacity: 1;
+         transform: scale(1);
+       }
+       50% {
+         opacity: 0.7;
+         transform: scale(1.05);
+       }
+     }
+     
+     .animate-pulse {
+       animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+     }
+   </style>
+ </head>
+ <body class="bg-slate-900">
+   <!-- Skip navigation link for keyboard users -->
+   <a href="#main-content" class="skip-link">Skip to main content</a>
+   
+   <!-- Application container with proper ARIA roles -->
+   <div id="app" role="application" aria-label="JARVIS AI Assistant"></div>
+   
+   <!-- Accessibility enhancement script -->
+   <script>
+     // Ensure focus management works properly
+     document.addEventListener('DOMContentLoaded', function() {
+       // Add aria-busy to app container during loading states
+       const appContainer = document.getElementById('app');
+       
+       // Set up mutation observer for dynamic content changes
+       const observer = new MutationObserver(function(mutations) {
+         mutations.forEach(function(mutation) {
+           if (mutation.type === 'childList') {
+             // Announce new content to screen readers
+             const addedNodes = Array.from(mutation.addedNodes);
+             addedNodes.forEach(node => {
+               if (node.nodeType === Node.ELEMENT_NODE) {
+                 node.setAttribute('aria-live', 'polite');
+               }
+             });
+           }
+         });
+       });
+       
+       if (appContainer) {
+         observer.observe(appContainer, {
+           childList: true,
+           subtree: true
+         });
+       }
+     });
+   </script>
+ </body>
 </html>

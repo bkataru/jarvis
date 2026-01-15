@@ -2,11 +2,31 @@
 target = "index.html"
 dist = "dist"
 public_url = "/"
+release = false
+filehash = true
+minify = "on_release"
 
 [watch]
 ignore = ["./dist"]
 
 [serve]
-addresses = ["127.0.0.1"]
+addresses = ["127.0.0.1", "0.0.0.0"]
 port = 8080
 open = false
+no_autoreload = false
+no_error_reporting = false
+
+[clean]
+dist = "dist"
+cargo = false
+
+# Optimization hooks for release builds
+[[hooks]]
+stage = "pre_build"
+command = "echo"
+command_arguments = ["Running pre-build optimizations..."]
+
+[[hooks]]
+stage = "post_build"
+command = "echo"
+command_arguments = ["Build completed successfully!"]

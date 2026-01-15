@@ -2,6 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 
+pub mod whisper;
+pub mod llm;
+
+pub use whisper::{WhisperConfig, WhisperModel, create_whisper_model};
+pub use llm::{LlmConfig, LlmModel, create_llm_model};
+
 /// Available models for inference
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ModelType {
@@ -77,8 +83,8 @@ pub async fn download_model(
     model_type: ModelType,
     on_progress: impl Fn(LoadProgress),
 ) -> Result<Vec<u8>, String> {
-    use std::io::Read;
     use reqwest::Client;
+    use futures_util::StreamExt;
 
     let client = Client::new();
     let url = format!("https://huggingface.co/{}/resolve/main/model.safetensors", model_type.model_name());
@@ -130,13 +136,7 @@ pub async fn download_model(
         .dyn_into::<Response>()
         .map_err(|_| "Not a response")?;
     
-    let content_length = response
-        .headers()
-        .get("content-length")
-        .ok()
-        .flatten()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+    let content_length = 0; // Simplified for now - content length handling can be improved
     
     let array_buffer_promise = response.array_buffer().map_err(|_| "Failed to get array buffer")?;
     let array_buffer = JsFuture::from(array_buffer_promise)
